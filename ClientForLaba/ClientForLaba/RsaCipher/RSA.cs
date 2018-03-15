@@ -1,15 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Net.Http;
 using System.Numerics;
-using System.Runtime.Serialization.Formatters.Binary;
-using System.Security.Cryptography;
-using System.Text;
-using System.Windows.Forms;
 
-
-namespace ServerForLab.RSAcipher
+namespace ServerForLab.RsaCipher
 {
     public class RSA
     {
@@ -100,6 +93,7 @@ namespace ServerForLab.RSAcipher
         {
             BigInteger bi = new BigInteger();
             List<BigInteger> encrypted = new List<BigInteger>();
+            
 
             for (var index = 0; index < aeskey.Length; index++)
             {

@@ -30,3 +30,6 @@ bld/
 *.exe
 
 *.log
+/ServerForLab/DecFile.png
+/ServerForLab/EncFile
+/text.txt
