@@ -97,7 +97,7 @@ namespace ServerForLab.RSAcipher
 
         public static byte[] Decrypt(List<BigInteger> deckey, PrivateKey pk)
         {
-            byte[] key = new byte[32];
+            byte[] key = new byte[deckey.Count];
             BigInteger bi = new BigInteger();
             for (int i = 0; i < key.Length; i++)
             {

@@ -44,13 +44,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AES.cs" />
-    <Compile Include="ClientObject.cs" />
+    <Compile Include="NetServer.cs" />
     <Compile Include="RSAcipher\PrivateKey.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RSAcipher\PublicKey.cs" />
     <Compile Include="RSAcipher\RSA.cs" />
-    <Compile Include="StateMachine.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

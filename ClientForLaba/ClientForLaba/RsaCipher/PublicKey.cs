@@ -1,7 +1,6 @@
 ﻿using System;
 
-
-namespace ServerForLab.RSAcipher
+namespace ServerForLab.RsaCipher
 {
     [Serializable]
     public class PublicKey

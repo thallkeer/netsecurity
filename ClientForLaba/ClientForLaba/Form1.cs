@@ -14,20 +14,19 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+
 using ServerForLab;
-using ServerForLab.RSAcipher;
-using RSA = ServerForLab.RSAcipher.RSA;
+using ServerForLab.RsaCipher;
+using RSA = ServerForLab.RsaCipher.RSA;
+
 
 namespace ClientForLaba
 {
     public partial class Form1 : Form
     {
-        const int port = 8888;
-        const string address = "127.0.0.1";
-        private static byte[] file;
-        private static MemoryStream ms = new MemoryStream();
-       private static BinaryWriter bw =new BinaryWriter(ms);
-        private static BinaryFormatter bf = new BinaryFormatter();
+        private static byte[] buf = new byte[1024];
+        byte[] file;
+        
 
         public Form1()
         {
@@ -48,11 +47,15 @@ namespace ClientForLaba
         {
             try
             {
-                SendMessageFromSocket(11000);
+                SendMessageFromSocket("127.0.0.1",8888);
+            }
+            catch (SocketException exc)
+            {
+                ConsoleLog.Text = String.Format("{0} Error code: {1}.", exc.Message, exc.ErrorCode);
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
+                ConsoleLog.Text = String.Format(ex.ToString());
             }
             finally
             {
@@ -60,130 +63,152 @@ namespace ClientForLaba
             }
         }
 
-        public void SendMessageFromSocket(int port)
+        public void SendMessageFromSocket(string server,int port)
         {
-            // Соединяемся с удаленным устройством
-            
-            // Устанавливаем удаленную точку для сокета
-            IPHostEntry ipHost = Dns.GetHostEntry("localhost");
-            IPAddress ipAddr = ipHost.AddressList[0];
-            IPEndPoint ipEndPoint = new IPEndPoint(ipAddr, port);
-
-            Socket sender = new Socket(ipAddr.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-
-            // Соединяем сокет с удаленной точкой
-            sender.Connect(ipEndPoint);
-
-            //Console.Write("Введите сообщение: ");
-            //string message = Console.ReadLine();
-
-            Console.WriteLine("Сокет соединяется с {0} ", sender.RemoteEndPoint.ToString());
-            //byte[] msg = Encoding.UTF8.GetBytes(message);
-
-            using (AesCryptoServiceProvider aes = new AesCryptoServiceProvider())
-            {
-                //byte[] encrypted = AES.EncryptFile(file, aes.Key, aes.IV);
-                //sender.Send(encrypted);
-                //int bytesRec = sender.Receive(ms.GetBuffer());
-                //ConsoleLog.Text += String.Format("\nОтвет от сервера: получено {0}\n\n", Encoding.UTF8.GetString(ms.GetBuffer(), 0, bytesRec));
-
-                //sender.Send(File.ReadAllBytes("C:\\Users\\kir73\\OneDrive\\Рабочий стол\\Homer.png"));
-
-                RSA rsa = new RSA();
-                var enckey = RSA.Encrypt(aes.Key, rsa.PublicKey);
-                bf.Serialize(ms, enckey);
-                sender.Send(ms.ToArray());
-                //int bytesRec = sender.Receive(ms.GetBuffer());
-                //ConsoleLog.Text += String.Format("\nОтвет от сервера: получено {0}\n\n", Encoding.UTF8.GetString(ms.GetBuffer(), 0, bytesRec));
-                //ms.Position = 0;
-
-                //var enciv = RSA.Encrypt(aes.IV, rsa.PublicKey);
-                //bf.Serialize(ms, enciv);
-                //sender.Send(ms.ToArray());
-                //bytesRec = sender.Receive(ms.GetBuffer());
-                //ConsoleLog.Text += String.Format("\nОтвет от сервера: получено {0}\n\n", Encoding.UTF8.GetString(ms.GetBuffer(), 0, bytesRec));
-
-
-
-
-                //bw.Write(aes.Key);
-                //bw.Write(aes.IV);
-                //byte[] enclist = new byte[ms.Length];
-                //ms.Position = 0;
-                //ms.Read(enclist, 0, enclist.Length);
-                //ms.Close();
-            }
-            // Получаем ответ от сервера
-            
-
-            // Используем рекурсию для неоднократного вызова SendMessageFromSocket()
-            //if (message.IndexOf("<TheEnd>") == -1)
-            //SendMessageFromSocket(port);
-
-            // Освобождаем сокет
-            sender.Shutdown(SocketShutdown.Both);
-            sender.Close();
-        }
-
-        public void TcpClient()
-        {
-            string userName = "keer";
-            TcpClient client = null;
             try
             {
-                client = new TcpClient(address, port);
+                TcpClient client = new TcpClient();
+                client.Connect(server, port);
+
+               
+                StringBuilder response = new StringBuilder();
                 NetworkStream stream = client.GetStream();
 
-                //while (true)
-                //{
-                    ConsoleLog.Text += userName + ": ";
-                    // ввод сообщения
-                    string message = ConsoleLog.Text + "\n";
-                    message = String.Format("{0}: {1}", userName, message);
-                    // преобразуем сообщение в массив байтов
-                    byte[] data = Encoding.Unicode.GetBytes(message);
-                    // отправка сообщения
-                    stream.Write(data, 0, data.Length);
+                string command = "Собираюсь отправить файл";
+                SendCommand(stream,command);
 
-                    // получаем ответ
-                    data = new byte[64]; // буфер для получаемых данных
-                    StringBuilder builder = new StringBuilder();
-                    int bytes = 0;
-                    do
+                PublicKey pk = Step1(stream, response);
+               
+                AesCryptoServiceProvider aes = new AesCryptoServiceProvider();
+                while (true)
+                {
+                    command = ReceiveCommand(stream);
+                    switch (command)
                     {
-                        bytes = stream.Read(data, 0, data.Length);
-                        builder.Append(Encoding.Unicode.GetString(data, 0, bytes));
-                    } while (stream.DataAvailable && bytes!=0);
+                        case "Давай сюда файл":
+                        {
+                            Step2(stream, aes);
+                            break;
+                        }
+                        case "Давай сюда ключ":
+                        {
+                            Step3(stream, aes, pk);
+                            break;
+                        }
+                        case "Ну и вектор гони":
+                        {
+                            Step4(stream, aes, pk);
+                            break;
+                        }
+                        case "Спасибо":
+                        {
+                            SendCommand(stream, "Конец передачи");
+                            stream.Close();
+                            client.Close();
+                            break;
+                        }
+                    }
+                }
+                //do
+                //{
+                //    int bytes = stream.Read(data, 0, data.Length);
+                //    response.Append(Encoding.UTF8.GetString(data, 0, bytes));
+                //} while (stream.DataAvailable); // пока данные есть в потоке
+                //MessageLog(response.ToString());
 
-                    message = builder.ToString();
-                    ConsoleLog.Text += String.Format("Сервер: {0}", message);
-                //}
+
+                //stream.Write(file,0,file.Length);
+                //MessageLog("Файл отправлен");
+
+                // Закрываем потоки
+               
             }
-            catch (Exception ex)
+            catch (SocketException e)
             {
-                Console.WriteLine(ex.Message);
+                MessageLog($@"SocketException: {e}");
             }
-            finally
+            catch (Exception e)
             {
-                client.Close();
+                MessageLog($@"Exception: {e.Message}");
             }
+
+            MessageLog("Запрос завершен...");
         }
 
-        private void button1_Click(object sender, EventArgs e)
+        public PublicKey Step1(NetworkStream stream,StringBuilder response)
         {
-            TcpClient();
+            do
+            {
+                int bytes = stream.Read(buf, 0, buf.Length);
+                response.Append(Encoding.UTF8.GetString(buf, 0, bytes));
+            } while (stream.DataAvailable); // пока данные есть в потоке
+            MessageLog(response.ToString());
+            string parameters = response.ToString();
+            long exp = Convert.ToInt64(parameters.Split(Convert.ToChar(","))[0]);
+            long mod = Convert.ToInt64(parameters.Split(Convert.ToChar(","))[1]);
+            return new PublicKey(exp, mod);
         }
 
-        public byte[] ToBinary(string param)
+        public void Step2(NetworkStream stream, AesCryptoServiceProvider aes)
         {
-            var ms = new MemoryStream();
-            var bw = new BinaryWriter(ms);
-            bw.Write(param);
-            bw.Flush();
-            ms.Flush();
-            return ms.ToArray();
+            byte[] encfile = AES.EncryptFile(file, aes.Key, aes.IV);
+            SendCommand(stream, "Отправляю зашифрованный файл");
+            stream.Write(encfile, 0, encfile.Length);
+            MessageLog("Зашифрованный файл отправлен");
         }
+
+        public void Step3(NetworkStream stream, AesCryptoServiceProvider aes, PublicKey pk)
+        {
+            var keylist = RSA.Encrypt(aes.Key, pk);
+            BinaryFormatter bf = new BinaryFormatter();
+            MemoryStream ms = new MemoryStream();
+            MessageLog("Отправляю ключ");
+            SendCommand(stream, "Отправляю ключ");
+            bf.Serialize(ms, keylist);
+            stream.Write(ms.ToArray(),0,ms.ToArray().Length);
+            MessageLog("Ключ отправлен");
+           
+        }
+
+        public void Step4(NetworkStream stream, AesCryptoServiceProvider aes, PublicKey pk)
+        {
+            var ivlist = RSA.Encrypt(aes.IV, pk);
+            BinaryFormatter bf = new BinaryFormatter();
+            MemoryStream ms = new MemoryStream();
+            MessageLog("Отправляю вектор");
+            SendCommand(stream, "Отправляю вектор");
+            ms.Position = 0;
+            bf.Serialize(ms, ivlist);
+            stream.Write(ms.ToArray(), 0, ms.ToArray().Length);
+            MessageLog("Вектор отправлен");
+        }
+
+
+
+        public void MessageLog(string str)
+        {
+            ConsoleLog.Text += str + "\n";
+        }
+
+        public void MessageLog(FormattableString fs)
+        {
+            ConsoleLog.Text += fs + "\n";
+        }
+
+        public static string ReceiveCommand(NetworkStream ns)
+        {
+            int received = ns.Read(buf, 0, buf.Length);
+            return Encoding.UTF8.GetString(buf, 0, received);
+        }
+
+        public static void SendCommand(NetworkStream ns, string command)
+        {
+            byte[] data = Encoding.UTF8.GetBytes(command);
+            ns.Write(data, 0, data.Length);
+        }
+
     }
+
 }
 
 
