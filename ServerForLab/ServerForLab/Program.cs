@@ -9,117 +9,193 @@ using System.Text;
 using System.Threading.Tasks;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
-using ServerForLab.RSAcipher;
+using System.Security.Cryptography;
 using System.Threading;
+using RSA = ServerForLab.RSAcipher.RSA;
 
 namespace ServerForLab
 {
     class Program
     {
         private const int port = 8888;
-        private static TcpListener listener;
-        private static byte[] buf = new byte[1000000];
-        private static MemoryStream ms = new MemoryStream();//(new byte[256], 0, 256, true, true);
-        private static BinaryReader br =new BinaryReader(ms);
-        private static BinaryFormatter bf = new BinaryFormatter();
-        
+        private static byte[] buf = new byte[1024];
+        private static RSA rsa;
+        private static List<BigInteger> key, iv;
         static void Main(string[] args)
         {
-            // Устанавливаем для сокета локальную конечную точку
-            IPHostEntry ipHost = Dns.GetHostEntry("localhost");
-            IPAddress ipAddr = ipHost.AddressList[0];
-            IPEndPoint ipEndPoint = new IPEndPoint(ipAddr, 11000);
-
-            // Создаем сокет Tcp/Ip
-            Socket sListener = new Socket(ipAddr.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-
-            // Назначаем сокет локальной конечной точке и слушаем входящие сокеты
+            TcpListener server = null;
+            
             try
             {
-                sListener.Bind(ipEndPoint);
-                sListener.Listen(10);
-                // Начинаем слушать соединения
+                IPAddress localAddr = IPAddress.Parse("127.0.0.1");
+                server = new TcpListener(localAddr, port);
+
+                // запуск слушателя
+                server.Start();
+
                 while (true)
                 {
-                    Console.WriteLine("Ожидаем соединение через порт {0}", ipEndPoint);
+                    Console.WriteLine("Ожидание подключений... ");
 
-                    // Программа приостанавливается, ожидая входящее соединение
+                    // получаем входящее подключение
+                    TcpClient client = server.AcceptTcpClient();
+                    Console.WriteLine("Подключен клиент. Выполнение запроса...");
+                    File.Delete(@"C:\Users\kir73\source\repos\netsecurity\ServerForLab\EncFile");
+                    File.Delete(@"C:\Users\kir73\source\repos\netsecurity\ServerForLab\DecFile.png");
 
-                    Socket handler = sListener.Accept();
-                    
+                    // получаем сетевой поток для чтения и записи
+                    NetworkStream stream = client.GetStream();
 
-                    
-                    //int received = handler.Receive(buf);
-                    //handler.Send(Encoding.Default.GetBytes(received.ToString()));
-                    //byte[] file = buf;
+                    //// сообщение для отправки клиенту
+                    //string response = "Привет мир";
+                    //// преобразуем сообщение в массив байтов
+                    //byte[] data = Encoding.UTF8.GetBytes(response);
 
-                    // br.Read(file,0,file.Length);
-                    
-                   
-                    int received = handler.Receive(buf);
-                    //File.WriteAllBytes("C:\\Users\\kir73\\OneDrive\\Рабочий стол\\ABC.png", buf);
-                    BinaryWriter bw = new BinaryWriter(ms);
-                    bw.Write(buf);
-                    ms.Position = 0;
-                    List<BigInteger> Key = (List<BigInteger>) bf.Deserialize(ms);
-                   
+                    //// отправка сообщения
+                    //stream.Write(data, 0, data.Length);
+                    //Console.WriteLine("Отправлено сообщение: {0}", response);
+                    while (true)
+                    {
+                        string command = ReceiveCommand(stream);
+                        if (command.Contains("Отправляю ключ"))
+                        {
+                            command = "Отправляю ключ";
+                        }
+                        //Console.Beep();
+                        switch (command)
+                        {
+                            case "Собираюсь отправить файл":
+                            {
+                                rsa = new RSA();
+                                StringBuilder sb = new StringBuilder();
+                                sb.Append(rsa.PublicKey.E);
+                                sb.Append(",");
+                                sb.Append(rsa.PublicKey.N);
+                                byte[] tosend = Encoding.UTF8.GetBytes(sb.ToString());
+                                stream.Write(tosend, 0, tosend.Length);
+                                Console.WriteLine("Ключ rsa отправлен");
+                                SendCommand(stream, "Давай сюда файл");
+                                break;
+                            }
+                            case "Отправляю зашифрованный файл":
+                            {
+                                int count = 0;
+                                do
+                                {
+                                    int bytes = stream.Read(buf, 0, buf.Length);
+                                    count += bytes;
+                                    using (FileStream fstream = new FileStream(
+                                        @"C:\Users\kir73\source\repos\netsecurity\ServerForLab\EncFile",
+                                        FileMode.Append))
+                                    {
+                                        fstream.Write(buf, 0, buf.Length);
+                                    }
 
+                                } while (stream.DataAvailable); // пока данные есть в потоке
 
-                    //handler.Send(Encoding.Default.GetBytes(received.ToString()));
-                    received = handler.Receive(buf);
-                    bw = new BinaryWriter(ms);
-                    bw.Write(buf);
-                    ms.Position = 0;
-                    List<BigInteger> IV = (List<BigInteger>)bf.Deserialize(ms);
+                                Console.WriteLine("Получено байтов: {0}", count);
+                                Console.WriteLine("Зашифрованный файл получен");
+                                SendCommand(stream, "Давай сюда ключ");
+                                    break;
+                            }
+                            case "Отправляю ключ":
+                            {
+                                int count = 0;
+                                MemoryStream mstream = new MemoryStream();
+                                do
+                                {
+                                    int bytes = stream.Read(buf, 0, buf.Length);
+                                    count += bytes;
+                                    mstream.Write(buf, 0, buf.Length);
+                                } while (stream.DataAvailable); // пока данные есть в потоке
 
+                                BinaryFormatter bf = new BinaryFormatter();
+                                mstream.Position = 0;
+                                key = (List<BigInteger>)bf.Deserialize(mstream);
+                                Console.WriteLine("Получено байтов: {0}", count);
+                                Console.WriteLine("Зашифрованный ключ получен");
+                                SendCommand(stream,"Ну и вектор гони");
+                                break;
+                            }
+                            case "Отправляю вектор":
+                            {
+                                int count = 0;
+                                MemoryStream mstream = new MemoryStream();
+                                do
+                                {
+                                    int bytes = stream.Read(buf, 0, buf.Length);
+                                    count += bytes;
+                                    mstream.Write(buf, 0, buf.Length);
+                                } while (stream.DataAvailable); // пока данные есть в потоке
 
+                                BinaryFormatter bf = new BinaryFormatter();
+                                mstream.Position = 0;
+                                iv = (List<BigInteger>)bf.Deserialize(mstream);
+                                Console.WriteLine("Получено байтов: {0}", count);
+                                Console.WriteLine("Зашифрованный вектор получен");
+                                Process();
+                                SendCommand(stream, "Спасибо");
+                                break;
+                            }
+                            case "Конец передачи":
+                            {
+                                client.Close();
+                                break;
+                            }
+                        }
+                    }
 
-                    //var decrypted = AES.DecryptFile(, Key, IV);
-                    //File.WriteAllBytes("C:\\Users\\kir73\\OneDrive\\Рабочий стол\\DecHomer.png", decrypted);
+                    //do
+                //{
+                //    int bytes = stream.Read(buf, 0, buf.Length);
+                //    using (FileStream fstream = new FileStream(@"C:\Users\kir73\OneDrive\Рабочий стол\DecHomer", FileMode.Append))
+                //    {
+                //        fstream.Write(buf,0,buf.Length);
+                //    }
 
-                    //BinaryFormatter bf = new BinaryFormatter();
-                    //List<BigInteger> forrsa = (List<BigInteger>)bf.Deserialize(ms);
+                //} while (stream.DataAvailable); // пока данные есть в потоке
+                //Console.WriteLine("Файл записан");
+                // закрываем подключение
 
-                    handler.Shutdown(SocketShutdown.Both);
-                    handler.Close();
-                }
             }
-            catch (Exception ex)
+            }
+            catch (Exception e)
             {
-                Console.WriteLine(ex.ToString());
+                Console.WriteLine(e.Message);
             }
             finally
             {
-                Console.ReadLine();
+                server?.Stop();
             }
+
         }
 
+        public static void Process()
+        {
+            var deckey = RSA.Decrypt(key, rsa.PrivateKey);
+            var deciv = RSA.Decrypt(iv, rsa.PrivateKey);
+            var encfile = File.ReadAllBytes(@"C:\Users\kir73\source\repos\netsecurity\ServerForLab\EncFile");
+            var decfile = AES.DecryptFile(encfile, deckey, deciv);
+            File.WriteAllBytes(@"C:\Users\kir73\source\repos\netsecurity\ServerForLab\DecFile.png",decfile);
+        }
 
-            }
+        public static void SendCommand(NetworkStream ns, string command)
+        {
+            byte[] data = Encoding.UTF8.GetBytes(command);
+            ns.Write(data, 0, data.Length);
+        }
 
-    //try
-    //{
-    //listener = new TcpListener(IPAddress.Parse("127.0.0.1"), port);
-    //listener.Start();
-    //Console.WriteLine("Ожидание подключений...");
-
-    //while (true)
-    //{
-    //    TcpClient client = listener.AcceptTcpClient();
-    //    ClientObject clientObject = new ClientObject(client);
-
-    //    // создаем новый поток для обслуживания нового клиента
-    //    Thread clientThread = new Thread(clientObject.Process);
-    //    clientThread.Start();
-    //}
-    //}
-    //catch (Exception ex)
-    //{
-    //Console.WriteLine(ex.Message);
-    //}
-    //finally
-    //{
-    //listener?.Stop();
-    //}
-   
+        public static string ReceiveCommand(NetworkStream ns)
+        {
+            int received = ns.Read(buf, 0, buf.Length);
+            return Encoding.UTF8.GetString(buf,0,received);
+        }
+    }
 }
+
+
+    
+
+
+
+

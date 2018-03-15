@@ -1,6 +1,6 @@
 ﻿
 
-namespace ServerForLab.RSAcipher
+namespace ServerForLab.RsaCipher
 {
     public class PrivateKey
     {
