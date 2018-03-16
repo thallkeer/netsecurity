@@ -47,7 +47,7 @@ namespace ClientForLaba
         {
             try
             {
-                SendMessageFromSocket("127.0.0.1",8888);
+                SendMessageFromSocket("127.0.0.1", 8888);
             }
             catch (SocketException exc)
             {
@@ -62,6 +62,7 @@ namespace ClientForLaba
                 Console.ReadLine();
             }
         }
+        
 
         public void SendMessageFromSocket(string server,int port)
         {
@@ -80,7 +81,8 @@ namespace ClientForLaba
                 PublicKey pk = Step1(stream, response);
                
                 AesCryptoServiceProvider aes = new AesCryptoServiceProvider();
-                while (true)
+                bool run=true;
+                while (run)
                 {
                     command = ReceiveCommand(stream);
                     switch (command)
@@ -105,6 +107,7 @@ namespace ClientForLaba
                             SendCommand(stream, "Конец передачи");
                             stream.Close();
                             client.Close();
+                            run = false;
                             break;
                         }
                     }
@@ -142,7 +145,8 @@ namespace ClientForLaba
                 int bytes = stream.Read(buf, 0, buf.Length);
                 response.Append(Encoding.UTF8.GetString(buf, 0, bytes));
             } while (stream.DataAvailable); // пока данные есть в потоке
-            MessageLog(response.ToString());
+            Thread.Sleep(1000);
+            MessageLog("Ключ принят");
             string parameters = response.ToString();
             long exp = Convert.ToInt64(parameters.Split(Convert.ToChar(","))[0]);
             long mod = Convert.ToInt64(parameters.Split(Convert.ToChar(","))[1]);
@@ -154,6 +158,7 @@ namespace ClientForLaba
             byte[] encfile = AES.EncryptFile(file, aes.Key, aes.IV);
             SendCommand(stream, "Отправляю зашифрованный файл");
             stream.Write(encfile, 0, encfile.Length);
+            Thread.Sleep(1000);
             MessageLog("Зашифрованный файл отправлен");
         }
 
@@ -162,10 +167,12 @@ namespace ClientForLaba
             var keylist = RSA.Encrypt(aes.Key, pk);
             BinaryFormatter bf = new BinaryFormatter();
             MemoryStream ms = new MemoryStream();
+            Thread.Sleep(1000);
             MessageLog("Отправляю ключ");
             SendCommand(stream, "Отправляю ключ");
             bf.Serialize(ms, keylist);
             stream.Write(ms.ToArray(),0,ms.ToArray().Length);
+            Thread.Sleep(1000);
             MessageLog("Ключ отправлен");
            
         }
@@ -187,12 +194,12 @@ namespace ClientForLaba
 
         public void MessageLog(string str)
         {
-            ConsoleLog.Text += str + "\n";
+            ConsoleLog.Text += DateTime.Now.ToLongTimeString()+ @" " + str + "\n";
         }
 
         public void MessageLog(FormattableString fs)
         {
-            ConsoleLog.Text += fs + "\n";
+            ConsoleLog.Text += DateTime.Now.ToLongTimeString() + @" "+ fs + "\n";
         }
 
         public static string ReceiveCommand(NetworkStream ns)

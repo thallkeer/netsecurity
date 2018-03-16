@@ -11,6 +11,8 @@ using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Security.Cryptography;
 using System.Threading;
+using System.Diagnostics;
+using System.ComponentModel;
 using RSA = ServerForLab.RSAcipher.RSA;
 
 namespace ServerForLab
@@ -39,8 +41,8 @@ namespace ServerForLab
 
                     // получаем входящее подключение
                     TcpClient client = server.AcceptTcpClient();
-                    Console.WriteLine("Подключен клиент. Выполнение запроса...");
-                    File.Delete(@"C:\Users\kir73\source\repos\netsecurity\ServerForLab\EncFile");
+                    Console.WriteLine(DateTime.Now.ToLongTimeString() + " Подключен клиент. Выполнение запроса...");
+                    File.Delete(@"C:\Users\kir73\source\repos\netsecurity\ServerForLab\EncFile.png");
                     File.Delete(@"C:\Users\kir73\source\repos\netsecurity\ServerForLab\DecFile.png");
 
                     // получаем сетевой поток для чтения и записи
@@ -73,7 +75,7 @@ namespace ServerForLab
                                 sb.Append(rsa.PublicKey.N);
                                 byte[] tosend = Encoding.UTF8.GetBytes(sb.ToString());
                                 stream.Write(tosend, 0, tosend.Length);
-                                Console.WriteLine("Ключ rsa отправлен");
+                                Console.WriteLine(DateTime.Now.ToLongTimeString()+" Ключ rsa отправлен");
                                 SendCommand(stream, "Давай сюда файл");
                                 break;
                             }
@@ -85,7 +87,7 @@ namespace ServerForLab
                                     int bytes = stream.Read(buf, 0, buf.Length);
                                     count += bytes;
                                     using (FileStream fstream = new FileStream(
-                                        @"C:\Users\kir73\source\repos\netsecurity\ServerForLab\EncFile",
+                                        @"C:\Users\kir73\source\repos\netsecurity\ServerForLab\EncFile.png",
                                         FileMode.Append))
                                     {
                                         fstream.Write(buf, 0, buf.Length);
@@ -93,8 +95,8 @@ namespace ServerForLab
 
                                 } while (stream.DataAvailable); // пока данные есть в потоке
 
-                                Console.WriteLine("Получено байтов: {0}", count);
-                                Console.WriteLine("Зашифрованный файл получен");
+                                Console.WriteLine(DateTime.Now.ToLongTimeString()+" Получено байтов: {0}", count);
+                                Console.WriteLine(DateTime.Now.ToLongTimeString()+" Зашифрованный файл получен");
                                 SendCommand(stream, "Давай сюда ключ");
                                     break;
                             }
@@ -112,8 +114,8 @@ namespace ServerForLab
                                 BinaryFormatter bf = new BinaryFormatter();
                                 mstream.Position = 0;
                                 key = (List<BigInteger>)bf.Deserialize(mstream);
-                                Console.WriteLine("Получено байтов: {0}", count);
-                                Console.WriteLine("Зашифрованный ключ получен");
+                                Console.WriteLine(DateTime.Now.ToLongTimeString()+" Получено байтов: {0}", count);
+                                Console.WriteLine(DateTime.Now.ToLongTimeString()+" Зашифрованный ключ получен");
                                 SendCommand(stream,"Ну и вектор гони");
                                 break;
                             }
@@ -131,15 +133,18 @@ namespace ServerForLab
                                 BinaryFormatter bf = new BinaryFormatter();
                                 mstream.Position = 0;
                                 iv = (List<BigInteger>)bf.Deserialize(mstream);
-                                Console.WriteLine("Получено байтов: {0}", count);
-                                Console.WriteLine("Зашифрованный вектор получен");
+                                Console.WriteLine(DateTime.Now.ToLongTimeString() + " Получено байтов: {0}", count);
+                                Console.WriteLine(DateTime.Now.ToLongTimeString() + " Зашифрованный вектор получен");
                                 Process();
+                               
                                 SendCommand(stream, "Спасибо");
                                 break;
                             }
                             case "Конец передачи":
                             {
                                 client.Close();
+                                System.Diagnostics.Process.Start(@"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe", @"C:\Users\kir73\source\repos\netsecurity\ServerForLab\DecFile.png");
+                                Console.ReadKey();
                                 break;
                             }
                         }
@@ -174,9 +179,12 @@ namespace ServerForLab
         {
             var deckey = RSA.Decrypt(key, rsa.PrivateKey);
             var deciv = RSA.Decrypt(iv, rsa.PrivateKey);
-            var encfile = File.ReadAllBytes(@"C:\Users\kir73\source\repos\netsecurity\ServerForLab\EncFile");
+            var encfile = File.ReadAllBytes(@"C:\Users\kir73\source\repos\netsecurity\ServerForLab\EncFile.png");
             var decfile = AES.DecryptFile(encfile, deckey, deciv);
+            Console.WriteLine(DateTime.Now.ToLongTimeString() + $" Файл длиной {decfile.Length} расшифрован");
             File.WriteAllBytes(@"C:\Users\kir73\source\repos\netsecurity\ServerForLab\DecFile.png",decfile);
+
+            
         }
 
         public static void SendCommand(NetworkStream ns, string command)
