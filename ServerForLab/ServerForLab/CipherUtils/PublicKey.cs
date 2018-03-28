@@ -6,10 +6,10 @@ namespace ServerForLab.RSAcipher
     [Serializable]
     public class PublicKey
     {
-        public long E { get; }
-        public long N { get; }
+        public BigInteger E { get; }
+        public BigInteger N { get; }
 
-        public PublicKey(long e, long n)
+        public PublicKey(BigInteger e, BigInteger n)
         {
             this.E = e;
             this.N = n;
