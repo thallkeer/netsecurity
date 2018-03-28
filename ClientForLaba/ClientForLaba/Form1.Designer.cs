@@ -30,15 +30,12 @@
         {
             this.btnSelect = new System.Windows.Forms.Button();
             this.btnSend = new System.Windows.Forms.Button();
-            this.ConsoleLog = new System.Windows.Forms.RichTextBox();
             this.openFD = new System.Windows.Forms.OpenFileDialog();
-            this.btnSendFile = new System.Windows.Forms.Button();
-            this.btnSendKey = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // btnSelect
             // 
-            this.btnSelect.Location = new System.Drawing.Point(0, 41);
+            this.btnSelect.Location = new System.Drawing.Point(12, 12);
             this.btnSelect.Name = "btnSelect";
             this.btnSelect.Size = new System.Drawing.Size(75, 23);
             this.btnSelect.TabIndex = 0;
@@ -48,7 +45,7 @@
             // 
             // btnSend
             // 
-            this.btnSend.Location = new System.Drawing.Point(81, 41);
+            this.btnSend.Location = new System.Drawing.Point(93, 12);
             this.btnSend.Name = "btnSend";
             this.btnSend.Size = new System.Drawing.Size(75, 23);
             this.btnSend.TabIndex = 0;
@@ -56,28 +53,15 @@
             this.btnSend.UseVisualStyleBackColor = true;
             this.btnSend.Click += new System.EventHandler(this.btnSend_Click);
             // 
-            // ConsoleLog
-            // 
-            this.ConsoleLog.Dock = System.Windows.Forms.DockStyle.Right;
-            this.ConsoleLog.Location = new System.Drawing.Point(327, 0);
-            this.ConsoleLog.Name = "ConsoleLog";
-            this.ConsoleLog.Size = new System.Drawing.Size(191, 261);
-            this.ConsoleLog.TabIndex = 1;
-            this.ConsoleLog.Text = "";
-            // 
             // openFD
             // 
             this.openFD.FileName = "openFileDialog1";
-          
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(518, 261);
-            this.Controls.Add(this.ConsoleLog);
-            this.Controls.Add(this.btnSendKey);
-            this.Controls.Add(this.btnSendFile);
+            this.ClientSize = new System.Drawing.Size(180, 49);
             this.Controls.Add(this.btnSend);
             this.Controls.Add(this.btnSelect);
             this.Name = "Form1";
@@ -90,10 +74,7 @@
 
         private System.Windows.Forms.Button btnSelect;
         private System.Windows.Forms.Button btnSend;
-        private System.Windows.Forms.RichTextBox ConsoleLog;
         private System.Windows.Forms.OpenFileDialog openFD;
-        private System.Windows.Forms.Button btnSendFile;
-        private System.Windows.Forms.Button btnSendKey;
     }
 }
 
