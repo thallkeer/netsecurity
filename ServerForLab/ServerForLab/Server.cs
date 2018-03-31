@@ -7,6 +7,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Numerics;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using ServerForLab.CipherUtils;
@@ -17,12 +18,15 @@ namespace ServerForLab
     {
         private const int port = 8888;
         private IPAddress localAddr = IPAddress.Parse("127.0.0.1");
+        private static string EncFilePath = @"C:\Users\kir73\source\repos\netsecurity\ServerForLab\EncFile.png";
+        private static string DecFilePath = @"C:\Users\kir73\source\repos\netsecurity\ServerForLab\DecFile.png";
         private static byte[] buf = new byte[1024];
+        private static byte[] hash;
         private static KeyPair pair;
         private static List<BigInteger> key, iv;
         private TcpListener server;
         private static NetworkStream stream;
-
+        
         public Server()
         {
             server = new TcpListener(localAddr, port);
@@ -34,8 +38,8 @@ namespace ServerForLab
             {
                 // запуск слушателя
                 server.Start();
-                File.Delete(@"C:\Users\kir73\source\repos\netsecurity\ServerForLab\EncFile.png");
-                File.Delete(@"C:\Users\kir73\source\repos\netsecurity\ServerForLab\DecFile.png");
+                File.Delete(EncFilePath);
+                File.Delete(DecFilePath);
                 while (true)
                 {
                     Console.WriteLine("Ожидание подключений... ");
@@ -58,6 +62,7 @@ namespace ServerForLab
                                 SendCommand(Commands.KeyRequest);
                                 break;
                             }
+                           
                             case Commands.SendKey:
                             {
                                 key = ReceiveEncKeyVector();
@@ -76,15 +81,30 @@ namespace ServerForLab
                                 var deckey = ServerRsa.Decrypt(key, pair.PrivateKey);
                                 var deciv = ServerRsa.Decrypt(iv, pair.PrivateKey);
                                 ReceiveEncFile(deckey,deciv);
+                                SendCommand(Commands.HashRequest);
+                                break;
+                            }
+                            case Commands.SendHash:
+                            {
+                                ReceiveHash();
                                 SendCommand(Commands.Handshake);
                                 break;
                             }
                             case Commands.EndTransmition:
                             {
                                 client.Close();
-                                System.Diagnostics.Process.Start(
-                                    @"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
-                                    @"C:\Users\kir73\source\repos\netsecurity\ServerForLab\DecFile.png");
+                                if (CheckHash(hash))
+                                {
+                                    Console.WriteLine("Хеш совпадает!");
+                                    System.Diagnostics.Process.Start(
+                                        @"C:\Program Files(x86)\Google\Chrome\Application\chrome.exe",
+                                        @"C:\Users\kir73\source\repos\netsecurity\ServerForLab\DecFile.png");
+                                }
+                                else
+                                {
+                                    Console.WriteLine("Ошибка, хеш не совпадает!");
+                                }
+
                                 Console.ReadKey();
                                 break;
                             }
@@ -135,36 +155,80 @@ namespace ServerForLab
 
         private void ReceiveEncFile(byte[] key, byte[] iv)
         {
+
             int count = 0;
-            byte[] tmp;
             do
             {
                 int bytes = stream.Read(buf, 0, buf.Length);
-                if (bytes < 1024)
-                {
-                    Array.Resize(ref buf,bytes);
-                }
                 count += bytes;
 
                 using (FileStream fstream = new FileStream(
-                    @"C:\Users\kir73\source\repos\netsecurity\ServerForLab\DecFile.png",
+                    EncFilePath,
                     FileMode.Append))
                 {
-                    tmp = ServerAes.DecryptFile(buf, key, iv);
-                    fstream.Write(tmp, 0, tmp.Length);
+                    fstream.Write(buf, 0, bytes);//buf.length
                 }
-                buf = new byte[1024];
-               
 
             } while (stream.DataAvailable); // пока данные есть в потоке
 
-            //byte[] abc = File.ReadAllBytes(@"C:\Users\kir73\source\repos\netsecurity\ServerForLab\EncFile.png");
-            //decfile = ServerAes.DecryptFile(abc, key, iv);
-            //File.WriteAllBytes(@"C:\Users\kir73\source\repos\netsecurity\ServerForLab\DecFile.png", decfile);
+            byte[] abc = File.ReadAllBytes(EncFilePath);
+            byte[] decfile = ServerAes.DecryptFile(abc, key, iv);
+            byte[] length = new byte[4];
+            Array.Copy(decfile,0,length,0,4);
+            var arrlength = BitConverter.ToInt32(length,0);
+            byte[] tmpDecFile = new byte[arrlength];
+            Array.Copy(decfile,4,tmpDecFile,0,tmpDecFile.Length);
+            File.WriteAllBytes(DecFilePath, tmpDecFile);
 
             Console.WriteLine(DateTime.Now.ToLongTimeString() + " Получено байтов: {0}", count);
             Console.WriteLine(DateTime.Now.ToLongTimeString() + " Зашифрованный файл получен");
             
+        }
+
+        private static void ReceiveHash()
+        {
+            MemoryStream mstream = new MemoryStream();
+            do
+            {
+                stream.Read(buf, 0, buf.Length);
+                mstream.Write(buf, 0, buf.Length);
+            } while (stream.DataAvailable); // пока данные есть в потоке
+
+            BinaryFormatter bf = new BinaryFormatter();
+            mstream.Position = 0;
+            var encHash = (List<BigInteger>) bf.Deserialize(mstream);
+            hash = ServerRsa.Decrypt(encHash,pair.PrivateKey);
+        }
+
+        private static bool CheckHash(byte[] decryptedHash)
+        {
+            SHA256 mySHA256 = SHA256.Create();
+            byte[] decryptedFile =
+                File.ReadAllBytes(DecFilePath);
+            //Console.WriteLine("Файл");
+            //PrintByteArray(decryptedFile);
+            var hashValue = mySHA256.ComputeHash(decryptedFile);
+            Console.WriteLine("Хеш расшифрованного файла");
+            PrintByteArray(hashValue);
+            Console.WriteLine("Полученный хеш");
+            PrintByteArray(decryptedHash);
+            for (int i = 0; i < decryptedHash.Length; i++)
+            {
+                if (decryptedHash[i] != hashValue[i]) return false;
+            }
+
+            return true;
+        }
+
+        private static void PrintByteArray(byte[] array)
+        {
+            int i;
+            for (i = 0; i < array.Length; i++)
+            {
+                Console.Write($"{array[i]:X2}");
+                if ((i % 4) == 3) Console.Write(" ");
+            }
+            Console.WriteLine();
         }
 
         private static void DecryptFile()
