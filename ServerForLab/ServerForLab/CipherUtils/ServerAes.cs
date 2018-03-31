@@ -41,7 +41,7 @@ namespace ServerForLab.CipherUtils
 
                             // Read the decrypted bytes from the decrypting 
                             //stream
-                            
+
                             csDecrypt.Read(decrypted, 0, decrypted.Length);
                             csDecrypt.Close();
 
