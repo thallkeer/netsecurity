@@ -7,16 +7,22 @@ using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using ClientForLab.CipherUtils;
 
 namespace ClientForLab
 {
     class Program
     {
         private const string filename = "C:\\Users\\kir73\\OneDrive\\Рабочий стол\\Homer.png";
+        
         static void Main(string[] args)
         {
             byte[] file = File.ReadAllBytes(filename);
-            //PrintByteArray(file);
+            MySha256 sha = new MySha256();
+            PrintByteArray(sha.computeHash(file));
+
+            SHA256 sha256 = SHA256.Create();
+            PrintByteArray(sha256.ComputeHash(file));
             do
             {
                 Console.WriteLine("Для начала нажмите Enter");

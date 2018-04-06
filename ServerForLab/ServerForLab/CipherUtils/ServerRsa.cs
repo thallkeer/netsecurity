@@ -6,13 +6,13 @@ namespace ServerForLab.CipherUtils
 {
     public class ServerRsa
     {
-        public static byte[] Decrypt(List<BigInteger> deckey, PrivateKey pk)
+        public static byte[] Decrypt(List<BigInteger> deckey, BigInteger exponent, BigInteger modulus)
         {
             byte[] key = new byte[deckey.Count];
             BigInteger bi = new BigInteger();
             for (int i = 0; i < key.Length; i++)
             {
-                bi = BigInteger.ModPow(deckey[i], pk.D, pk.N);
+                bi = BigInteger.ModPow(deckey[i], exponent, modulus);
                 key[i] = (byte)bi;
             }
 
