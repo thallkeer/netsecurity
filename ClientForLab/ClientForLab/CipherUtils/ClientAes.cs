@@ -9,13 +9,6 @@ namespace ClientForLab.CipherUtils
     {
         public static byte[] EncryptFile(byte[] file, byte[] key, byte[] iv)
         {
-            // Check arguments.
-            if (file == null || file.Length <= 0)
-                throw new ArgumentNullException(nameof(file));
-            if (key == null || key.Length <= 0)
-                throw new ArgumentNullException(nameof(key));
-            if (iv == null || iv.Length <= 0)
-                throw new ArgumentNullException(nameof(iv));
             byte[] encrypted;
             byte[] length = BitConverter.GetBytes(file.Length);
             byte[] toEncrypt = new byte[file.Length+length.Length];

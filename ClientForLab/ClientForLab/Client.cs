@@ -35,6 +35,7 @@ namespace ClientForLab
 
 
                 PublicKey pk = GetPublicKey(response);
+                PrivateKey myKey = null;
 
                 AesCryptoServiceProvider aes = new AesCryptoServiceProvider();
                 bool run = true;
@@ -58,12 +59,17 @@ namespace ClientForLab
                              SendEncFile(aes);
                              break;
                         }
-                        case Commands.HashRequest:
+                        case Commands.PublicKeyRequest:
                         {
-                            SendFileHash(pk);
+                            myKey = SendPublicKey();
                             break;
                         }
-
+                        case Commands.HashRequest:
+                        {
+                            SendFileHash(myKey);
+                            break;
+                        }
+                       
                         case Commands.Handshake:
                         {
                             SendCommand(Commands.EndTransmition);
@@ -88,12 +94,18 @@ namespace ClientForLab
             MessageLog("Запрос завершен...");
         }
 
-        private void SendFileHash(PublicKey pk)
+        private void SendFileHash(PrivateKey pk)
         {
-            SHA256 mySHA256 = SHA256.Create();
-            var hashValue = mySHA256.ComputeHash(file);
+            //SHA256 mySHA256 = SHA256.Create();
+            MySha256 clientSha = new MySha256();
+
+           
+
+            //var hashValue = mySHA256.ComputeHash(file);
+            var hashValue = clientSha.computeHash(file);
             PrintByteArray(hashValue);
-            var hash = ClientRsa.Encrypt(hashValue,pk);
+           
+            var hash = ClientRsa.Encrypt(hashValue,pk.D,pk.N);
 
             BinaryFormatter bf = new BinaryFormatter();
             MemoryStream ms = new MemoryStream();
@@ -102,7 +114,21 @@ namespace ClientForLab
             bf.Serialize(ms, hash);
             stream.Write(ms.ToArray(), 0, ms.ToArray().Length);
             MessageLog("Хеш отправлен");
+           
+        }
 
+        private PrivateKey SendPublicKey()
+        {
+           KeyPair kp = new KeyPair();
+            StringBuilder sb = new StringBuilder();
+            sb.Append(kp.PublicKey.E);
+            sb.Append(",");
+            sb.Append(kp.PublicKey.N);
+            byte[] tosend = Encoding.UTF8.GetBytes(sb.ToString());
+            SendCommand(Commands.SendPublicKey);
+            stream.Write(tosend, 0, tosend.Length);
+            Console.WriteLine(DateTime.Now.ToLongTimeString() + " Ключ rsa отправлен");
+            return kp.PrivateKey;
         }
 
         // Print the byte array in a readable format.
@@ -142,7 +168,7 @@ namespace ClientForLab
 
         private void SendEncKeyVector(byte[] toEncrypt, PublicKey pk)
         {
-            var listToSend = ClientRsa.Encrypt(toEncrypt, pk);
+            var listToSend = ClientRsa.Encrypt(toEncrypt, pk.E,pk.N);
             BinaryFormatter bf = new BinaryFormatter();
             MemoryStream ms = new MemoryStream();
             MessageLog("Отправляю ключ");

@@ -5,7 +5,7 @@ namespace ClientForLab.CipherUtils
 {
     public static class ClientRsa
     {
-        public static List<BigInteger> Encrypt(byte[] aeskey, PublicKey pk)
+        public static List<BigInteger> Encrypt(byte[] aeskey, BigInteger expon, BigInteger modulus)
         {
             BigInteger bi;
             List<BigInteger> encrypted = new List<BigInteger>();
@@ -13,7 +13,7 @@ namespace ClientForLab.CipherUtils
             foreach (var elem in aeskey)
             {
                 bi = elem;
-                bi = BigInteger.ModPow(bi, pk.E, pk.N);
+                bi = BigInteger.ModPow(bi, expon, modulus);
                 encrypted.Add(bi);
             }
 
