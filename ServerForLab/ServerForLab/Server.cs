@@ -11,6 +11,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using ServerForLab.CipherUtils;
+using ServerForLab.RSAcipher;
 
 namespace ServerForLab
 {
@@ -40,6 +41,7 @@ namespace ServerForLab
                 server.Start();
                 File.Delete(EncFilePath);
                 File.Delete(DecFilePath);
+                
                 while (true)
                 {
                     Console.WriteLine("Ожидание подключений... ");
@@ -50,6 +52,7 @@ namespace ServerForLab
                  
                     // получаем сетевой поток для чтения и записи
                     stream = client.GetStream();
+                    PublicKey clientPk=null;
 
                     while (true)
                     {
@@ -78,26 +81,33 @@ namespace ServerForLab
                             }
                             case Commands.SendEncFile:
                             {
-                                var deckey = ServerRsa.Decrypt(key, pair.PrivateKey);
-                                var deciv = ServerRsa.Decrypt(iv, pair.PrivateKey);
+                                var deckey = ServerRsa.Decrypt(key, pair.PrivateKey.D,pair.PrivateKey.N);
+                                var deciv = ServerRsa.Decrypt(iv, pair.PrivateKey.D, pair.PrivateKey.N);
                                 ReceiveEncFile(deckey,deciv);
+                                SendCommand(Commands.PublicKeyRequest);
+                                    break;
+                            }
+                            case Commands.SendPublicKey:
+                            {
+                                clientPk = GetPublicKey(new StringBuilder());
                                 SendCommand(Commands.HashRequest);
                                 break;
                             }
                             case Commands.SendHash:
                             {
-                                ReceiveHash();
+                                ReceiveHash(clientPk);
                                 SendCommand(Commands.Handshake);
                                 break;
                             }
+                           
                             case Commands.EndTransmition:
                             {
-                                client.Close();
+                                //client.Close();
                                 if (CheckHash(hash))
                                 {
                                     Console.WriteLine("Хеш совпадает!");
                                     System.Diagnostics.Process.Start(
-                                        @"C:\Program Files(x86)\Google\Chrome\Application\chrome.exe",
+                                        @"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
                                         @"C:\Users\kir73\source\repos\netsecurity\ServerForLab\DecFile.png");
                                 }
                                 else
@@ -133,6 +143,21 @@ namespace ServerForLab
             stream.Write(tosend, 0, tosend.Length);
             Console.WriteLine(DateTime.Now.ToLongTimeString() + " Ключ rsa отправлен");
            
+        }
+
+        private PublicKey GetPublicKey(StringBuilder response)
+        {
+            do
+            {
+                int bytes = stream.Read(buf, 0, buf.Length);
+                response.Append(Encoding.UTF8.GetString(buf, 0, bytes));
+            } while (stream.DataAvailable); // пока данные есть в потоке
+
+            Console.WriteLine("Ключ принят");
+            string parameters = response.ToString();
+            BigInteger exp = BigInteger.Parse(parameters.Split(Convert.ToChar(","))[0]);
+            BigInteger mod = BigInteger.Parse(parameters.Split(Convert.ToChar(","))[1]);
+            return new PublicKey(exp, mod);
         }
 
         private List<BigInteger> ReceiveEncKeyVector()
@@ -185,7 +210,7 @@ namespace ServerForLab
             
         }
 
-        private static void ReceiveHash()
+        private static void ReceiveHash(PublicKey receivedKey)
         {
             MemoryStream mstream = new MemoryStream();
             do
@@ -197,17 +222,19 @@ namespace ServerForLab
             BinaryFormatter bf = new BinaryFormatter();
             mstream.Position = 0;
             var encHash = (List<BigInteger>) bf.Deserialize(mstream);
-            hash = ServerRsa.Decrypt(encHash,pair.PrivateKey);
+            hash = ServerRsa.Decrypt(encHash,receivedKey.E,receivedKey.N);
         }
 
         private static bool CheckHash(byte[] decryptedHash)
         {
-            SHA256 mySHA256 = SHA256.Create();
+            //SHA256 mySHA256 = SHA256.Create();
             byte[] decryptedFile =
                 File.ReadAllBytes(DecFilePath);
             //Console.WriteLine("Файл");
             //PrintByteArray(decryptedFile);
-            var hashValue = mySHA256.ComputeHash(decryptedFile);
+            //mySHA256.ComputeHash(decryptedFile);
+            MySha256 serverSha = new MySha256();
+            var hashValue = serverSha.computeHash(decryptedFile);
             Console.WriteLine("Хеш расшифрованного файла");
             PrintByteArray(hashValue);
             Console.WriteLine("Полученный хеш");
@@ -229,16 +256,6 @@ namespace ServerForLab
                 if ((i % 4) == 3) Console.Write(" ");
             }
             Console.WriteLine();
-        }
-
-        private static void DecryptFile()
-        {
-            var deckey = ServerRsa.Decrypt(key, pair.PrivateKey);
-            var deciv = ServerRsa.Decrypt(iv, pair.PrivateKey);
-            var encfile = File.ReadAllBytes(@"C:\Users\kir73\source\repos\netsecurity\ServerForLab\EncFile.png");
-            var decfile = ServerAes.DecryptFile(encfile, deckey, deciv);
-            Console.WriteLine(DateTime.Now.ToLongTimeString() + $" Файл длиной {decfile.Length} расшифрован");
-            File.WriteAllBytes(@"C:\Users\kir73\source\repos\netsecurity\ServerForLab\DecFile.png", decfile);
         }
 
         private static void SendCommand(string command)

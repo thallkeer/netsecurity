@@ -13,5 +13,7 @@
         public const string FileRequest = "Запрос файла";
         public const string Handshake = "Подтверждение приема";
         public const string EndTransmition = "Конец передачи";
+        public const string PublicKeyRequest = "Запрос ключа rsa";
+        public const string SendPublicKey = "Отправляю ключ rsa";
     }
 }

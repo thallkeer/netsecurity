@@ -43,10 +43,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CipherUtils\MySha256.cs" />
+    <Compile Include="CipherUtils\PrivateKey.cs" />
     <Compile Include="Client.cs" />
     <Compile Include="CipherUtils\ClientAes.cs" />
     <Compile Include="CipherUtils\ClientRsa.cs" />
     <Compile Include="Commands.cs" />
+    <Compile Include="CipherUtils\KeyPair.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="CipherUtils\PublicKey.cs" />
