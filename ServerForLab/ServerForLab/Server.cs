@@ -10,8 +10,8 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using CipherUtilities;
 using ServerForLab.CipherUtils;
-using ServerForLab.RSAcipher;
 
 namespace ServerForLab
 {

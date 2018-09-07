@@ -1,7 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace ServerForLab.RSAcipher
+namespace CipherUtilities
 {
     [Serializable]
     public class PublicKey
@@ -14,6 +18,5 @@ namespace ServerForLab.RSAcipher
             this.E = e;
             this.N = n;
         }
-
     }
 }

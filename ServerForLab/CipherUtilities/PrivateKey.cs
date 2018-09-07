@@ -1,8 +1,13 @@
-﻿using System.Numerics;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Numerics;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace ClientForLab.CipherUtils
+namespace CipherUtilities
 {
-    public class PrivateKey
+   public class PrivateKey
     {
         public BigInteger D { get; }
         public BigInteger N { get; }
