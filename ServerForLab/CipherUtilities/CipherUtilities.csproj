@@ -4,16 +4,15 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{3DF74678-7959-438D-8B17-AB144C5DA9CE}</ProjectGuid>
-    <OutputType>Exe</OutputType>
-    <RootNamespace>ServerForLab</RootNamespace>
-    <AssemblyName>ServerForLab</AssemblyName>
+    <ProjectGuid>{D8CC3B2F-9CC6-4FC5-908D-AFEDF6FC8200}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>CipherUtilities</RootNamespace>
+    <AssemblyName>CipherUtilities</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -23,7 +22,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
@@ -43,25 +41,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CipherUtils\ServerAes.cs" />
-    <Compile Include="Commands.cs" />
-    <Compile Include="Program.cs" />
+    <Compile Include="KeyPair.cs" />
+    <Compile Include="MySha256.cs" />
+    <Compile Include="PrivateKey.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="CipherUtils\ServerRsa.cs" />
-    <Compile Include="Server.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="App.config" />
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <WCFMetadata Include="Connected Services\" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\CipherUtilities\CipherUtilities.csproj">
-      <Project>{D8CC3B2F-9CC6-4FC5-908D-AFEDF6FC8200}</Project>
-      <Name>CipherUtilities</Name>
-    </ProjectReference>
+    <Compile Include="PublicKey.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

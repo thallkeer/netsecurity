@@ -5,6 +5,7 @@ using System.Numerics;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Security.Cryptography;
 using System.Text;
+using CipherUtilities;
 using ClientForLab.CipherUtils;
 
 namespace ClientForLab

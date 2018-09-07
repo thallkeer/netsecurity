@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using CipherUtilities;
 using ClientForLab.CipherUtils;
 
 namespace ClientForLab
