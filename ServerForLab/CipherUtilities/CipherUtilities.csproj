@@ -41,6 +41,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Commands.cs" />
     <Compile Include="KeyPair.cs" />
     <Compile Include="MySha256.cs" />
     <Compile Include="PrivateKey.cs" />

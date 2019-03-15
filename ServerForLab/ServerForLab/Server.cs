@@ -19,14 +19,14 @@ namespace ServerForLab
     {
         private const int port = 8888;
         private IPAddress localAddr = IPAddress.Parse("127.0.0.1");
-        private static string EncFilePath = @"C:\Users\kir73\source\repos\netsecurity\ServerForLab\EncFile.png";
-        private static string DecFilePath = @"C:\Users\kir73\source\repos\netsecurity\ServerForLab\DecFile.png";
-        private static byte[] buf = new byte[1024];
-        private static byte[] hash;
-        private static KeyPair pair;
-        private static List<BigInteger> key, iv;
+        private string EncFilePath = @"";
+        private string DecFilePath = @"";
+        private byte[] buf = new byte[1024];
+        private byte[] hash;
+        private KeyPair pair;
+        private List<BigInteger> key, iv;
         private TcpListener server;
-        private static NetworkStream stream;
+        private NetworkStream stream;
         
         public Server()
         {
@@ -38,9 +38,7 @@ namespace ServerForLab
             try
             {
                 // запуск слушателя
-                server.Start();
-                File.Delete(EncFilePath);
-                File.Delete(DecFilePath);
+                server.Start();               
                 
                 while (true)
                 {
@@ -107,8 +105,7 @@ namespace ServerForLab
                                 {
                                     Console.WriteLine("Хеш совпадает!");
                                     System.Diagnostics.Process.Start(
-                                        @"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
-                                        @"C:\Users\kir73\source\repos\netsecurity\ServerForLab\DecFile.png");
+                                        @"",DecFilePath);
                                 }
                                 else
                                 {
@@ -210,7 +207,7 @@ namespace ServerForLab
             
         }
 
-        private static void ReceiveHash(PublicKey receivedKey)
+        private void ReceiveHash(PublicKey receivedKey)
         {
             MemoryStream mstream = new MemoryStream();
             do
@@ -225,14 +222,11 @@ namespace ServerForLab
             hash = ServerRsa.Decrypt(encHash,receivedKey.E,receivedKey.N);
         }
 
-        private static bool CheckHash(byte[] decryptedHash)
+        private bool CheckHash(byte[] decryptedHash)
         {
-            //SHA256 mySHA256 = SHA256.Create();
             byte[] decryptedFile =
                 File.ReadAllBytes(DecFilePath);
-            //Console.WriteLine("Файл");
-            //PrintByteArray(decryptedFile);
-            //mySHA256.ComputeHash(decryptedFile);
+            
             MySha256 serverSha = new MySha256();
             var hashValue = serverSha.computeHash(decryptedFile);
             Console.WriteLine("Хеш расшифрованного файла");
@@ -241,7 +235,8 @@ namespace ServerForLab
             PrintByteArray(decryptedHash);
             for (int i = 0; i < decryptedHash.Length; i++)
             {
-                if (decryptedHash[i] != hashValue[i]) return false;
+                if (decryptedHash[i] != hashValue[i])
+                    return false;
             }
 
             return true;
@@ -258,13 +253,13 @@ namespace ServerForLab
             Console.WriteLine();
         }
 
-        private static void SendCommand(string command)
+        private void SendCommand(string command)
         {
             byte[] data = Encoding.UTF8.GetBytes(command);
             stream.Write(data, 0, data.Length);
         }
 
-        private static string ReceiveCommand()
+        private string ReceiveCommand()
         {
             int received = stream.Read(buf, 0, buf.Length);
             return Encoding.UTF8.GetString(buf, 0, received);
